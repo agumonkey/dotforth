@@ -53,7 +53,9 @@ typedef struct
     char*  ExecData; 
     u16*   ExecTypes; 
     u32    Data[32]; 
-    u32    _Guard[32]; 
+    u32    _Guard0[32]; 
+    u16    DataTypes[32]; 
+    u32    _Guard1[32]; 
     u32    ExecCount;
     u32    Count;
     char*  StringsData; 
@@ -185,8 +187,114 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t Length)
     }
 }
 
+#define Word0 Forth->Count-1
+#define Word1 Forth->Count-2
+#define Word2 Forth->Count-3
+#define Word3 Forth->Count-4
+
 void ExecuteForth(forth_ctx* Forth)
 {
+    int ExecCount = Forth->ExecCount;
+    u32* Integers = (u32*)Forth->ExecData;
+    f32* Floats   = (f32*)Forth->ExecData;
+    u32* StackInt   = (u32*)Forth->Data;
+    f32* StackFloat = (f32*)Forth->Data;
+    u16* StackTypes = (u16*)Forth->DataTypes;
+    for (int ii=0; ii<ExecCount; ++ii)
+    {
+        u16 WordType = Forth->ExecTypes[ii];
+        if (WordType == TYPE_INTEGER)
+        {
+            LOG("INT %d\n", Integers[ii]);
+            StackTypes[Forth->Count] = TYPE_INTEGER;
+            StackInt[Forth->Count++] = Integers[ii];
+        }
+        else if (WordType == TYPE_FLOAT)
+        {
+            LOG("FLOAT %f\n", Floats[ii]);
+            StackTypes[Forth->Count] = TYPE_FLOAT;
+            StackFloat[Forth->Count++] = Floats[ii];
+        }
+        else if (WordType == TYPE_VERB)
+        {
+            u32 Verb = Integers[ii];
+            LOG("VERB %d\n", Verb);
+            if (Verb == VERB_IADD)
+            {
+                u32 Result = StackInt[Word1] + StackInt[Word0];
+                StackInt[Word1] = Result;
+                StackTypes[Word1] = TYPE_INTEGER;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_ISUB)
+            {
+                u32 Result = StackInt[Word1] - StackInt[Word0];
+                StackInt[Word1] = Result;
+                StackTypes[Word1] = TYPE_INTEGER;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_IMUL)
+            {
+                u32 Result = StackInt[Word1] * StackInt[Word0];
+                StackInt[Word1] = Result;
+                StackTypes[Word1] = TYPE_INTEGER;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_IDIV)
+            {
+                u32 Result = StackInt[Word1] / StackInt[Word0];
+                StackInt[Word1] = Result;
+                StackTypes[Word1] = TYPE_INTEGER;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_FADD)
+            {
+                f32 Result = StackFloat[Word1] + StackFloat[Word0];
+                StackFloat[Word1] = Result;
+                StackTypes[Word1] = TYPE_FLOAT;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_FSUB)
+            {
+                f32 Result = StackFloat[Word1] - StackFloat[Word0];
+                StackFloat[Word1] = Result;
+                StackTypes[Word1] = TYPE_FLOAT;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_FMUL)
+            {
+                f32 Result = StackFloat[Word1] * StackFloat[Word0];
+                StackFloat[Word1] = Result;
+                StackTypes[Word1] = TYPE_FLOAT;
+                Forth->Count--;
+            }
+            else if (Verb == VERB_FDIV)
+            {
+                f32 Result = StackFloat[Word1] / StackFloat[Word0];
+                StackFloat[Word1] = Result;
+                StackTypes[Word1] = TYPE_FLOAT;
+                Forth->Count--;
+            }
+        }
+    }
+
+    LOG("On stack after execution\n");
+    for (int ii=0; ii<Forth->Count; ++ii)
+    {
+        u16 WordType = Forth->DataTypes[ii];
+        if (WordType == TYPE_INTEGER)
+        {
+            LOG("INT %d\n", StackInt[ii]);
+        }
+        else if(WordType == TYPE_FLOAT)
+        {
+            LOG("FLOAT %f\n", StackFloat[ii]);
+        }
+        else if(WordType == TYPE_VERB)
+        {
+            LOG("%s\n", VerbNames[StackInt[ii]]);
+        }
+    }
 }
 
 int main(int argc, char** argv)
@@ -211,8 +319,8 @@ int main(int argc, char** argv)
     forth_ctx Forth = {0};
     InitForth(&Forth);
     LoadForth(&Forth, File.Contents, File.ContentsSize);
+    ExecuteForth(&Forth);
     FreeForth(&Forth);
-
 
     return 0;
 }
