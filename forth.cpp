@@ -58,21 +58,17 @@ typedef struct
     u32    _Guard1[32]; 
     u32    ExecCount;
     u32    Count;
-    char*  StringsData; 
-    u32    StringsOffset;
 } forth_ctx;
 
 void InitForth(forth_ctx* Forth)
 {
     Forth->ExecData  = (char*)malloc(Megabytes(1));
-    Forth->StringsData  = (char*)malloc(Megabytes(1));
     Forth->ExecTypes = (u16*)malloc(Megabytes(1));
 }
 
 void FreeForth(forth_ctx* Forth)
 {
     free(Forth->ExecData);
-    free(Forth->StringsData);
     free(Forth->ExecTypes);
 }
 
