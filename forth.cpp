@@ -286,10 +286,6 @@ void ExecuteForth(forth_ctx* Forth)
         {
             LOG("FLOAT %f\n", StackFloat[ii]);
         }
-        else if(WordType == TYPE_VERB)
-        {
-            LOG("%s\n", VerbNames[StackInt[ii]]);
-        }
     }
 }
 
