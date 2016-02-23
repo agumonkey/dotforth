@@ -5,9 +5,12 @@
 #include "types.h"
 #include "util.c"
 
+#include "xxhash.h"
+
 enum
 {
     TYPE_NONE,
+    TYPE_BUILTIN_VERB,
     TYPE_VERB,
     TYPE_INTEGER,
     TYPE_FLOAT,
@@ -33,7 +36,7 @@ enum
 #undef XX
 
 #define XX(name, word) #word,
-static const char* VerbWords[] =
+static const char* BuiltinVerbWords[] =
 {
     VERBS
 };
@@ -46,7 +49,13 @@ static const char* VerbNames[] =
 };
 #undef XX
 
-static u16 VerbLengths[ARRAY_SIZE(VerbNames)];
+static u16 BuiltinVerbLengths[ARRAY_SIZE(VerbNames)];
+
+struct forth_verb_entry
+{
+    u32 StartOffset;
+    u32 EndOffset;
+};
 
 typedef struct 
 {
@@ -58,52 +67,42 @@ typedef struct
     u32    _Guard1[32]; 
     u32    ExecCount;
     u32    Count;
+    u64*   DictionaryKeys;
+    forth_verb_entry* VerbEntries;
 } forth_ctx;
 
 void InitForth(forth_ctx* Forth)
 {
     Forth->ExecData  = (char*)malloc(Megabytes(1));
     Forth->ExecTypes = (u16*)malloc(Megabytes(1));
+    Forth->DictionaryKeys = (u64*)malloc(Megabytes(1));
+    Forth->VerbEntries = (forth_verb_entry*)malloc(Megabytes(1));
 }
 
 void FreeForth(forth_ctx* Forth)
 {
     free(Forth->ExecData);
     free(Forth->ExecTypes);
+    free(Forth->DictionaryKeys);
+    free(Forth->VerbEntries);
 }
 
 #define min(a,b) a<b?a:b
 
-void ParseForthWord(char* String, u32 Length, void* Data, u16 WordType)
+s32 WordIsBuiltinVerb(char* String, u32 Length)
 {
-    if (WordType == TYPE_INTEGER)
+    s32 Verb = -1;
+    for (int ii=1; ii<ARRAY_SIZE(BuiltinVerbWords); ++ii)
     {
-        u32 Value = strtol(String, 0, 10);
-        (*(u32*)(Data)) = Value;
-        LOG("INT %d\n", Value);
-    }
-    else if(WordType == TYPE_FLOAT)
-    {
-        f32 Value = strtof(String, 0);
-        (*(f32*)(Data)) = Value;
-        LOG("FLOAT %f\n", Value);
-    }
-    else if(WordType == TYPE_VERB)
-    {
-        u32 Verb = 0;
-        for (int ii=1; ii<ARRAY_SIZE(VerbWords); ++ii)
+        const char* VerbWord = BuiltinVerbWords[ii];
+        u16 VerbLength = BuiltinVerbLengths[ii];
+        if (Length == VerbLength && strncmp(VerbWord, String, Length) == 0)
         {
-            const char* VerbWord = VerbWords[ii];
-            u16 VerbLength = VerbLengths[ii];
-            if (Length == VerbLength && strncmp(VerbWord, String, Length) == 0)
-            {
-                Verb = ii;
-                break;
-            }
+            Verb = ii;
+            break;
         }
-        (*(u32*)(Data)) = Verb;
-        LOG("%s\n", VerbNames[Verb]);
     }
+    return Verb;
 }
 
 inline bool IsNumeric(char Char)
@@ -156,14 +155,38 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t Length)
         }
         else if(IsWhitespace(Char) || Offset == Length)
         {
-            if (WordType == TYPE_NONE)
+            char* String = &ProgramString[WordBegin];
+            u32   WordLength = Offset - WordBegin;
+            void* Data = &Forth->ExecData[Forth->ExecCount * sizeof(u32)];
+
+            if (WordType == TYPE_INTEGER)
             {
-                WordType = TYPE_VERB;
+                u32 Value = strtol(String, 0, 10);
+                (*(u32*)(Data)) = Value;
+                LOG("INT %d\n", Value);
             }
-            ParseForthWord(&ProgramString[WordBegin]
-                    , Offset - WordBegin
-                    , &Forth->ExecData[Forth->ExecCount * sizeof(u32)]
-                    , WordType);
+            else if(WordType == TYPE_FLOAT)
+            {
+                f32 Value = strtof(String, 0);
+                (*(f32*)(Data)) = Value;
+                LOG("FLOAT %f\n", Value);
+            }
+            else if (WordType == TYPE_NONE)
+            {
+                s32 Verb = WordIsBuiltinVerb(String, WordLength);
+                if (Verb != -1)
+                {
+                    WordType = TYPE_BUILTIN_VERB;
+                    (*(u32*)(Data)) = Verb;
+                    LOG("%s\n", VerbNames[Verb]);
+                }
+                else
+                {
+                    WordType = TYPE_VERB;
+                    LOG("USER VERB: %.*s\n", WordLength, String);
+                }
+            }
+
             Forth->ExecTypes[Forth->ExecCount] = WordType;
             Forth->ExecCount++;
             WordBegin = Offset+1;
@@ -201,20 +224,17 @@ void ExecuteForth(forth_ctx* Forth)
         u16 WordType = Forth->ExecTypes[ii];
         if (WordType == TYPE_INTEGER)
         {
-            LOG("INT %d\n", Integers[ii]);
             StackTypes[Forth->Count] = TYPE_INTEGER;
             StackInt[Forth->Count++] = Integers[ii];
         }
         else if (WordType == TYPE_FLOAT)
         {
-            LOG("FLOAT %f\n", Floats[ii]);
             StackTypes[Forth->Count] = TYPE_FLOAT;
             StackFloat[Forth->Count++] = Floats[ii];
         }
-        else if (WordType == TYPE_VERB)
+        else if (WordType == TYPE_BUILTIN_VERB)
         {
             u32 Verb = Integers[ii];
-            LOG("VERB %d\n", Verb);
             if (Verb == VERB_IADD)
             {
                 u32 Result = StackInt[Word1] + StackInt[Word0];
@@ -303,9 +323,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    for (int ii=1; ii<ARRAY_SIZE(VerbWords); ++ii)
+    for (int ii=1; ii<ARRAY_SIZE(BuiltinVerbWords); ++ii)
     {
-        VerbLengths[ii] = strlen(VerbWords[ii]);
+        BuiltinVerbLengths[ii] = strlen(BuiltinVerbWords[ii]);
     }
 
     forth_ctx Forth = {0};

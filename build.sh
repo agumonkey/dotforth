@@ -1,2 +1,2 @@
 #!/bin/bash
-g++ forth.cpp -o test
+g++ forth.cpp xxhash.c -o test
