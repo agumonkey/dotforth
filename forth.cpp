@@ -120,7 +120,6 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t Length)
     u32 Offset = 0;
     u32 WordBegin = 0;
     u16 WordType = TYPE_NONE;
-    bool EscapeNext = false;
 
     while (Offset < Length)
     {
@@ -191,15 +190,6 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t Length)
             Forth->ExecCount++;
             WordBegin = Offset+1;
             WordType = TYPE_NONE;
-        }
-
-        if (Char == '\\')
-        {
-            EscapeNext = true;
-        }
-        else if (EscapeNext)
-        {
-            EscapeNext = false;
         }
 
         Offset++;
