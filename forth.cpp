@@ -213,8 +213,8 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
 
         if (WordType == TYPE_INTEGER)
         {
-            u32 Value = strtol(WordString, 0, 10);
-            (*(u32*)(DefinitionData)) = Value;
+            s32 Value = strtol(WordString, 0, 10);
+            (*(s32*)(DefinitionData)) = Value;
             LOG("INT %d\n", Value);
         }
         else if(WordType == TYPE_FLOAT)
@@ -323,6 +323,27 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
             Forth->VerbExecCount++;
         }
     }
+
+#if 0
+    for (u32 ii=0; ii<Forth->VerbsCount; ++ii)
+    {
+        forth_verb_offset Verb = Forth->VerbOffsetEntries[ii];
+        LOG("VERB %d\n" ,ii);
+        char* VerbExecData = Forth->VerbExecData;
+        for (u32 jj=0; jj<Verb.WordCount; ++jj)
+        {
+            u16 WordType = Forth->VerbExecTypes[jj+Verb.StartOffset];
+            if (WordType == TYPE_INTEGER)
+            {
+                LOG("INT %d\n", *((s32*)&VerbExecData[(jj+Verb.StartOffset) * 4]));
+            }
+            else if(WordType == TYPE_FLOAT)
+            {
+                LOG("FLOAT %f\n", *((f32*)&VerbExecData[(jj+Verb.StartOffset) * 4]));
+            }
+        }
+    }
+#endif
 }
 
 #define Word0 Forth->Count-1
@@ -333,9 +354,9 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
 void ExecuteForth(forth_ctx* Forth)
 {
     int ExecCount = Forth->ExecCount;
-    u32* Integers = (u32*)Forth->ExecData;
+    s32* Integers = (s32*)Forth->ExecData;
     f32* Floats   = (f32*)Forth->ExecData;
-    u32* StackInt   = (u32*)Forth->Data;
+    s32* StackInt   = (s32*)Forth->Data;
     f32* StackFloat = (f32*)Forth->Data;
     u16* StackTypes = (u16*)Forth->DataTypes;
     for (int ii=0; ii<ExecCount; ++ii)
@@ -369,7 +390,7 @@ void ExecuteForth(forth_ctx* Forth)
 
                     case VERB_IADD:
                     {
-                        u32 Result = StackInt[Word1] + StackInt[Word0];
+                        s32 Result = StackInt[Word1] + StackInt[Word0];
                         StackInt[Word1] = Result;
                         StackTypes[Word1] = TYPE_INTEGER;
                         Forth->Count--;
@@ -377,7 +398,7 @@ void ExecuteForth(forth_ctx* Forth)
                     }
                     case VERB_ISUB:
                     {
-                        u32 Result = StackInt[Word1] - StackInt[Word0];
+                        s32 Result = StackInt[Word1] - StackInt[Word0];
                         StackInt[Word1] = Result;
                         StackTypes[Word1] = TYPE_INTEGER;
                         Forth->Count--;
@@ -385,7 +406,7 @@ void ExecuteForth(forth_ctx* Forth)
                     }
                     case VERB_IMUL:
                     {
-                        u32 Result = StackInt[Word1] * StackInt[Word0];
+                        s32 Result = StackInt[Word1] * StackInt[Word0];
                         StackInt[Word1] = Result;
                         StackTypes[Word1] = TYPE_INTEGER;
                         Forth->Count--;
@@ -393,7 +414,7 @@ void ExecuteForth(forth_ctx* Forth)
                     }
                     case VERB_IDIV:
                     {
-                        u32 Result = StackInt[Word1] / StackInt[Word0];
+                        s32 Result = StackInt[Word1] / StackInt[Word0];
                         StackInt[Word1] = Result;
                         StackTypes[Word1] = TYPE_INTEGER;
                         Forth->Count--;
