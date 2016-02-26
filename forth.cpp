@@ -10,7 +10,7 @@
 enum word_type
 {
     TYPE_NONE,
-    TYPE_BUILTIN_VERB,
+    TYPE_CORE_VERB,
     TYPE_VERB,
     TYPE_INTEGER,
     TYPE_FLOAT,
@@ -18,7 +18,7 @@ enum word_type
     TYPE_VERB_DEFINITION_CODEPOINT, 
 };
 
-#define BUILTIN_VERBS \
+#define CORE_VERBS \
     XX(NONE,  ) \
     XX(IADD, +) \
     XX(ISUB, -) \
@@ -31,29 +31,29 @@ enum word_type
     XX(FDIV, ./) \
     XX(DEFINITION_START, ::) \
     XX(DEFINITION_END,   ;;) \
-               
+
 #define XX(name, word) VERB_##name,
 enum
 {
-    BUILTIN_VERBS
+    CORE_VERBS
 };
 #undef XX
 
 #define XX(name, word) #word,
-static const char* BuiltinVerbWords[] =
+static const char* CoreVerbWords[] =
 {
-    BUILTIN_VERBS
+    CORE_VERBS
 };
 #undef XX
 
 #define XX(name, word) "VERB_"#name,
-static const char* VerbNames[] =
+static const char* CoreVerbNames[] =
 {
-    BUILTIN_VERBS
+    CORE_VERBS
 };
 #undef XX
 
-static u16 BuiltinVerbLengths[ARRAY_SIZE(VerbNames)];
+static u64 CoreVerbHashes[ARRAY_SIZE(CoreVerbNames)];
 
 struct forth_verb_offset
 {
@@ -105,14 +105,13 @@ void FreeForth(forth_ctx* Forth)
 
 #define min(a,b) a<b?a:b
 
-u32 WordIsBuiltinVerb(char* String, u32 Length)
+u32 WordIsCoreVerb(u64 Hash)
 {
     u32 Verb = 0;
-    for (int ii=1; ii<ARRAY_SIZE(BuiltinVerbWords); ++ii)
+    for (int ii=1; ii<ARRAY_SIZE(CoreVerbWords); ++ii)
     {
-        const char* VerbWord = BuiltinVerbWords[ii];
-        u16 VerbLength = BuiltinVerbLengths[ii];
-        if (Length == VerbLength && strncmp(VerbWord, String, Length) == 0)
+        u64 VerbHash = CoreVerbHashes[ii];
+        if (Hash == VerbHash)
         {
             Verb = ii;
             break;
@@ -225,7 +224,8 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
         }
         else if (WordType == TYPE_NONE)
         {
-            s32 Verb = WordIsBuiltinVerb(WordString, WordLength);
+            u64 VerbHash = XXH64(WordString, WordLength, 0xdeadc0de);
+            s32 Verb = WordIsCoreVerb(VerbHash);
             if (Verb != VERB_NONE)
             {
                 if (Verb == VERB_DEFINITION_START)
@@ -264,9 +264,9 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
                 }
                 else
                 {
-                    WordType = TYPE_BUILTIN_VERB;
+                    WordType = TYPE_CORE_VERB;
                     (*(u32*)(DefinitionData)) = Verb;
-                    LOG("%s\n", VerbNames[Verb]);
+                    LOG("%s\n", CoreVerbNames[Verb]);
                 }
             }
 
@@ -378,7 +378,7 @@ void ExecuteForth(forth_ctx* Forth)
                 break;
             }
 
-            case TYPE_BUILTIN_VERB:
+            case TYPE_CORE_VERB:
             {
                 u32 Verb = Integers[ii];
                 switch (Verb)
@@ -455,6 +455,7 @@ void ExecuteForth(forth_ctx* Forth)
 
                     default:
                     // Call verb function here
+
                     break;
                 }
                 break;
@@ -491,9 +492,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    for (int ii=1; ii<ARRAY_SIZE(BuiltinVerbWords); ++ii)
+    for (int ii=1; ii<ARRAY_SIZE(CoreVerbWords); ++ii)
     {
-        BuiltinVerbLengths[ii] = strlen(BuiltinVerbWords[ii]);
+        CoreVerbHashes[ii] = XXH64(CoreVerbWords[ii], strlen(CoreVerbWords[ii]), 0xdeadc0de);
     }
 
     forth_ctx Forth = {0};
