@@ -7,7 +7,6 @@
 
 #include "xxhash.h"
 
-
 enum word_type
 {
     TYPE_NONE,
