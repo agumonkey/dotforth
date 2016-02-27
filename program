@@ -1,3 +1,8 @@
-60 30 / 20 40 * * 33 30.0 50.0 .+ notDefined
-:: divideBy30 30 /
-;;
+:: div2 2 / ;;
+:: div3 3 / ;;
+:: div5 5 / ;;
+:: div6 div3 div2 ;;
+:: div30 div5 div6 ;;
+:: squared dup * ;;
+
+60 div30 squared squared
