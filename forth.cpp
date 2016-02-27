@@ -10,7 +10,7 @@
 enum word_type
 {
     TYPE_NONE,
-    TYPE_CORE_VERB,
+    TYPE_BASIC_VERB,
     TYPE_VERB,
     TYPE_INTEGER,
     TYPE_FLOAT,
@@ -18,7 +18,7 @@ enum word_type
     TYPE_VERB_DEFINITION_CODEPOINT, 
 };
 
-#define CORE_VERBS \
+#define BASIC_VERBS \
     XX(NONE,  ) \
     XX(IADD, +) \
     XX(ISUB, -) \
@@ -35,25 +35,25 @@ enum word_type
 #define XX(name, word) VERB_##name,
 enum
 {
-    CORE_VERBS
+    BASIC_VERBS
 };
 #undef XX
 
 #define XX(name, word) #word,
-static const char* CoreVerbWords[] =
+static const char* BasicVerbWords[] =
 {
-    CORE_VERBS
+    BASIC_VERBS
 };
 #undef XX
 
 #define XX(name, word) "VERB_"#name,
-static const char* CoreVerbNames[] =
+static const char* BasicVerbNames[] =
 {
-    CORE_VERBS
+    BASIC_VERBS
 };
 #undef XX
 
-static u64 CoreVerbHashes[ARRAY_SIZE(CoreVerbNames)];
+static u64 BasicVerbHashes[ARRAY_SIZE(BasicVerbNames)];
 
 struct forth_verb_offset
 {
@@ -105,12 +105,12 @@ void FreeForth(forth_ctx* Forth)
 
 #define min(a,b) a<b?a:b
 
-u32 WordIsCoreVerb(u64 Hash)
+u32 WordIsBasicVerb(u64 Hash)
 {
     u32 Verb = 0;
-    for (int ii=1; ii<ARRAY_SIZE(CoreVerbWords); ++ii)
+    for (int ii=1; ii<ARRAY_SIZE(BasicVerbWords); ++ii)
     {
-        u64 VerbHash = CoreVerbHashes[ii];
+        u64 VerbHash = BasicVerbHashes[ii];
         if (Hash == VerbHash)
         {
             Verb = ii;
@@ -225,7 +225,7 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
         else if (WordType == TYPE_NONE)
         {
             u64 VerbHash = XXH64(WordString, WordLength, 0xdeadc0de);
-            s32 Verb = WordIsCoreVerb(VerbHash);
+            s32 Verb = WordIsBasicVerb(VerbHash);
             if (Verb != VERB_NONE)
             {
                 if (Verb == VERB_DEFINITION_START)
@@ -264,13 +264,13 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
                 }
                 else
                 {
-                    WordType = TYPE_CORE_VERB;
+                    WordType = TYPE_BASIC_VERB;
                     (*(u32*)(DefinitionData)) = Verb;
-                    LOG("%s\n", CoreVerbNames[Verb]);
+                    LOG("%s\n", BasicVerbNames[Verb]);
                 }
             }
 
-            // Word is not a builtin verb
+            // Word is not a core verb
             else
             {
                 if (VerbDefinitionStage == 1)
@@ -378,7 +378,7 @@ void ExecuteForth(forth_ctx* Forth)
                 break;
             }
 
-            case TYPE_CORE_VERB:
+            case TYPE_BASIC_VERB:
             {
                 u32 Verb = Integers[ii];
                 switch (Verb)
@@ -492,9 +492,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    for (int ii=1; ii<ARRAY_SIZE(CoreVerbWords); ++ii)
+    for (int ii=1; ii<ARRAY_SIZE(BasicVerbWords); ++ii)
     {
-        CoreVerbHashes[ii] = XXH64(CoreVerbWords[ii], strlen(CoreVerbWords[ii]), 0xdeadc0de);
+        BasicVerbHashes[ii] = XXH64(BasicVerbWords[ii], strlen(BasicVerbWords[ii]), 0xdeadc0de);
     }
 
     forth_ctx Forth = {0};
