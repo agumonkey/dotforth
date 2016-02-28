@@ -5,6 +5,7 @@
 : div30 div5 div6 ;
 : squared dup * ;
 
-166
 60 div30 squared squared
-32 swap over rot
+32 swap over 
+
+30.0 dup 10.0 mesh-pos

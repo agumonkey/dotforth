@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "types.h"
+#include "forth.h"
+
 #include "util.c"
 
 #include "xxhash.h"
@@ -12,6 +14,7 @@ enum word_type
     TYPE_NONE,
     TYPE_BASIC_VERB,
     TYPE_VERB,
+    TYPE_MODULE_VERB,
     TYPE_INTEGER,
     TYPE_FLOAT,
     TYPE_VERB_DEFINITION_ENTRY, // Which entry we are replacing with
@@ -59,40 +62,9 @@ static const char* BasicVerbNames[] =
     BASIC_VERBS
 };
 #undef XX
-
 static u64 BasicVerbHashes[ARRAY_SIZE(BasicVerbNames)];
 
-struct forth_verb_offset
-{
-    u32 StartOffset;
-    u32 EndOffset;
-};
-
-typedef struct 
-{
-    char*  ExecData;  // Storage for program words
-    u16*   ExecTypes; 
-    u32    ExecCount;
-
-    char*  VerbExecData;  // Storage for program words
-    u16*   VerbExecTypes; 
-    u32    VerbExecCount;
-
-    u64* VerbNameHashes;
-    forth_verb_offset* VerbOffsetEntries;
-    u32 VerbsCount;
-
-    u32 StackReturnStarts[32];
-    u32 StackReturnEnds[32];
-    u32 StackReturnCount;   
-
-    // Stack
-    u32    Data[32]; 
-    u32    _Guard0[32]; 
-    u16    DataTypes[32]; 
-    u32    _Guard1[32]; 
-    u32    Count;   // # of items on the stack
-} forth_ctx;
+#include "mesh_module.cpp"
 
 void InitForth(forth_ctx* Forth)
 {
@@ -148,6 +120,20 @@ u32 FindVerbEntry(forth_ctx* Forth, u64 Hash)
     for (u32 ii=0; ii<VerbsCount; ++ii)
     {
         if (VerbNameHashes[ii] == Hash)
+        {
+            return ii;
+        }
+    }
+    return 0xffffffff;
+}
+
+u32 FindModuleVerbEntry(forth_ctx* Forth, u64 Hash)
+{
+    u32 VerbsCount = Forth->ModuleVerbCount;
+    u64* VerbHashes = Forth->ModuleVerbHashes;
+    for (u32 ii=0; ii<VerbsCount; ++ii)
+    {
+        if (VerbHashes[ii] == Hash)
         {
             return ii;
         }
@@ -225,18 +211,16 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
         {
             s32 Value = strtol(WordString, 0, 10);
             (*(s32*)(DefinitionData)) = Value;
-            LOG("INT %d\n", Value);
         }
         else if(WordType == TYPE_FLOAT)
         {
             f32 Value = strtof(WordString, 0);
             (*(f32*)(DefinitionData)) = Value;
-            LOG("FLOAT %f\n", Value);
         }
 
         else if (WordType == TYPE_NONE)
         {
-            u64 VerbHash = XXH64(WordString, WordLength, 0xdeadc0de);
+            u64 VerbHash = XXH64(WordString, WordLength, FORTH_HASH_CONSTANT);
             s32 Verb = WordIsBasicVerb(VerbHash);
             if (Verb != VERB_NONE)
             {
@@ -281,7 +265,7 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
                 {
                     WordType = TYPE_BASIC_VERB;
                     (*(u32*)(DefinitionData)) = Verb;
-                    LOG("%s\n", BasicVerbNames[Verb]);
+                    //LOG("%s\n", BasicVerbNames[Verb]);
                 }
             }
 
@@ -298,20 +282,30 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
                         CurrentVerbEntry = Forth->VerbsCount;
                     }
                     CurrentVerbHash = VerbHash;
-                    LOG("Loading into verb: %.*s\n", WordLength, WordString);
+                    //LOG("Loading into verb: %.*s\n", WordLength, WordString);
                 }
                 else // 0/2
                 {
-                    WordType = TYPE_VERB;
                     u32 VerbEntry = FindVerbEntry(Forth, VerbHash);
                     if (VerbEntry == 0xffffffff)
                     {
-                        LOG("ERROR: Unknown verb %.*s\n", WordLength, WordString);
+                        VerbEntry = FindModuleVerbEntry(Forth, VerbHash);
+                        if (VerbEntry == 0xffffffff)
+                        {
+                            LOG("ERROR: Unknown verb %.*s\n", WordLength, WordString);
+                        }
+                        else
+                        {
+                            WordType = TYPE_MODULE_VERB;
+                            (*(u32*)(DefinitionData)) = VerbEntry;
+                            //LOG("MODULE VERB: %.*s\n", WordLength, WordString);
+                        }
                     }
                     else
                     {
+                        WordType = TYPE_VERB;
                         (*(u32*)(DefinitionData)) = VerbEntry;
-                        LOG("USER VERB: %.*s\n", WordLength, WordString);
+                        //LOG("USER VERB: %.*s\n", WordLength, WordString);
                     }
                 }
             }
@@ -339,27 +333,6 @@ void LoadForth(forth_ctx* Forth, char* ProgramString, size_t ProgramLength)
             Forth->VerbExecCount++;
         }
     }
-
-#if 0
-    for (u32 ii=0; ii<Forth->VerbsCount; ++ii)
-    {
-        forth_verb_offset Verb = Forth->VerbOffsetEntries[ii];
-        LOG("VERB %d\n" ,ii);
-        char* VerbExecData = Forth->VerbExecData;
-        for (u32 jj=0; jj<Verb.WordCount; ++jj)
-        {
-            u16 WordType = Forth->VerbExecTypes[jj+Verb.StartOffset];
-            if (WordType == TYPE_INTEGER)
-            {
-                LOG("INT %d\n", *((s32*)&VerbExecData[(jj+Verb.StartOffset) * 4]));
-            }
-            else if(WordType == TYPE_FLOAT)
-            {
-                LOG("FLOAT %f\n", *((f32*)&VerbExecData[(jj+Verb.StartOffset) * 4]));
-            }
-        }
-    }
-#endif
 }
 
 #define Word0 Forth->Count-1
@@ -407,8 +380,6 @@ void ExecuteForth(forth_ctx* Forth)
         {
             case TYPE_INTEGER:
             {
-                if (Forth->StackReturnCount == 1)
-                    LOG("int %d\n", Integers[ii]);
                 StackTypes[Forth->Count] = TYPE_INTEGER;
                 StackInt[Forth->Count++] = Integers[ii];
                 break;
@@ -418,11 +389,15 @@ void ExecuteForth(forth_ctx* Forth)
             {
                 StackTypes[Forth->Count] = TYPE_FLOAT;
                 StackFloat[Forth->Count++] = Floats[ii];
-                if (Forth->StackReturnCount == 1)
-                    LOG("f32 %f\n", Floats[ii]);
                 break;
             }
 
+            case TYPE_MODULE_VERB:
+            {
+                forth_fn VerbFunction = Forth->ModuleVerbFuncPtrs[Integers[ii]];
+                VerbFunction(Forth, 0, 0);
+                break;
+            }
             case TYPE_VERB:
             {
                 bool SwitchToVerbsData = Forth->StackReturnCount == 0;
@@ -432,10 +407,8 @@ void ExecuteForth(forth_ctx* Forth)
                 forth_verb_offset VerbOffset = Forth->VerbOffsetEntries[Verb];
                 ii = VerbOffset.StartOffset;
                 StackReturnEnds[Forth->StackReturnCount] = VerbOffset.EndOffset;
-                LOG("Executing verb: %d : %d : %d\n", Verb, ii, VerbOffset.EndOffset);
                 if (SwitchToVerbsData)
                 {
-                    LOG("Switced\n");
                     Integers = (s32*)Forth->VerbExecData;
                     Floats   = (f32*)Forth->VerbExecData;
                     ExecTypes = Forth->VerbExecTypes;
@@ -612,6 +585,9 @@ void ExecuteForth(forth_ctx* Forth)
     }
 }
 
+#define LOAD_MODULES \
+    XX(Mesh)
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
@@ -628,11 +604,18 @@ int main(int argc, char** argv)
 
     for (int ii=1; ii<ARRAY_SIZE(BasicVerbWords); ++ii)
     {
-        BasicVerbHashes[ii] = XXH64(BasicVerbWords[ii], strlen(BasicVerbWords[ii]), 0xdeadc0de);
+        BasicVerbHashes[ii] = XXH64(BasicVerbWords[ii], strlen(BasicVerbWords[ii]), FORTH_HASH_CONSTANT);
     }
 
-    forth_ctx Forth = {0};
+    static forth_ctx Forth;
     InitForth(&Forth);
+
+#define XX(module) \
+    Forth.ModuleVerbCount += LoadModule_##module(Forth.ModuleVerbHashes + Forth.ModuleVerbCount, \
+            Forth.ModuleVerbFuncPtrs + Forth.ModuleVerbCount);
+    LOAD_MODULES
+#undef XX
+
     LoadForth(&Forth, File.Contents, File.ContentsSize);
     LOG("------------\nExecution\n-------------\n");
     ExecuteForth(&Forth);
