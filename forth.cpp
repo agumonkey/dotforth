@@ -31,8 +31,9 @@ enum word_type
     XX(FDIV, ./) \
     XX(DUP, dup) \
     XX(SWAP, swap) \
-    XX(DEFINITION_START, ::) \
-    XX(DEFINITION_END,   ;;) \
+    XX(OVER, over) \
+    XX(DEFINITION_START, :) \
+    XX(DEFINITION_END,   ;) \
 
 #define XX(name, word) VERB_##name,
 enum
@@ -420,7 +421,6 @@ void ExecuteForth(forth_ctx* Forth)
 
             case TYPE_VERB:
             {
-
                 bool SwitchToVerbsData = Forth->StackReturnCount == 0;
                 // Save program counter(ii) when jumping to a subroutine
                 StackReturnStarts[Forth->StackReturnCount++] = ii+1;
@@ -519,6 +519,25 @@ void ExecuteForth(forth_ctx* Forth)
                         u32 Dup = StackInt[Word0];
                         StackInt[Word0+1] = Dup;
                         StackTypes[Word0+1] = StackTypes[Word0];
+                        Forth->Count++;
+                        break;
+                    }
+                    case VERB_SWAP:
+                    {
+                        s32 TmpVal  = StackInt[Word1];
+                        u16 TmpType = StackTypes[Word1];
+                        StackInt[Word1] = StackInt[Word0];
+                        StackTypes[Word1] = StackTypes[Word0];
+                        StackInt[Word0] = TmpVal;
+                        StackTypes[Word0] = TmpType;
+                        break;
+                    }
+                    case VERB_OVER:
+                    {
+                        s32 TmpVal  = StackInt[Word1];
+                        u16 TmpType = StackTypes[Word1];
+                        StackInt[Word0+1] = TmpVal;
+                        StackTypes[Word0+1] = TmpType;
                         Forth->Count++;
                         break;
                     }

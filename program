@@ -1,8 +1,9 @@
-:: div2 2 / ;;
-:: div3 3 / ;;
-:: div5 5 / ;;
-:: div6 div3 div2 ;;
-:: div30 div5 div6 ;;
-:: squared dup * ;;
+: div2 2 / ;
+: div3 3 / ;
+: div5 5 / ;
+: div6 div3 div2 ;
+: div30 div5 div6 ;
+: squared dup * ;
 
 60 div30 squared squared
+32 swap over
