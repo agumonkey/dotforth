@@ -14,10 +14,6 @@ struct forth_ctx
     u16*   ExecTypes; 
     u32    ExecCount;
 
-    char*  VerbExecData;  // Storage for program words
-    u16*   VerbExecTypes; 
-    u32    VerbExecCount;
-
     u64* VerbNameHashes;
     forth_verb_offset* VerbOffsetEntries;
     u32 VerbsCount;

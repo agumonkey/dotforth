@@ -9,3 +9,7 @@
 32 swap over 
 
 30.0 dup 10.0 mesh-pos
+
+: squared dup dup * * ;
+
+30 squared
