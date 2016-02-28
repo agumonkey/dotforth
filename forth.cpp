@@ -32,6 +32,7 @@ enum word_type
     XX(DUP, dup) \
     XX(SWAP, swap) \
     XX(OVER, over) \
+    XX(DROP, drop) \
     XX(DEFINITION_START, :) \
     XX(DEFINITION_END,   ;) \
 
@@ -539,6 +540,11 @@ void ExecuteForth(forth_ctx* Forth)
                         StackInt[Word0+1] = TmpVal;
                         StackTypes[Word0+1] = TmpType;
                         Forth->Count++;
+                        break;
+                    }
+                    case VERB_DROP:
+                    {
+                        Forth->Count--;
                         break;
                     }
 
