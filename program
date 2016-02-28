@@ -5,5 +5,6 @@
 : div30 div5 div6 ;
 : squared dup * ;
 
+166
 60 div30 squared squared
-32 swap over
+32 swap over rot

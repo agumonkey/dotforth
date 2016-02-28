@@ -33,6 +33,9 @@ enum word_type
     XX(SWAP, swap) \
     XX(OVER, over) \
     XX(DROP, drop) \
+    XX(ROT, rot) \
+    XX(RROT, -rot) \
+    XX(PICK, pick) \
     XX(DEFINITION_START, :) \
     XX(DEFINITION_END,   ;) \
 
@@ -545,6 +548,41 @@ void ExecuteForth(forth_ctx* Forth)
                     case VERB_DROP:
                     {
                         Forth->Count--;
+                        break;
+                    }
+                    case VERB_ROT:
+                    {
+                        s32 Tmp0     = StackInt[Word0];
+                        u16 Tmp0Type = StackTypes[Word0];
+                        s32 Tmp1     = StackInt[Word1];
+                        u16 Tmp1Type = StackTypes[Word1];
+                        StackInt[Word0] = StackInt[Word2];
+                        StackTypes[Word0] = StackTypes[Word2];
+                        StackInt[Word1] = Tmp0;
+                        StackTypes[Word1] = Tmp0Type;
+                        StackInt[Word2] = Tmp1;
+                        StackTypes[Word2] = Tmp1Type;
+                        break;
+                    }
+                    case VERB_RROT:
+                    {
+                        s32 Tmp0     = StackInt[Word0];
+                        u16 Tmp0Type = StackTypes[Word0];
+                        s32 Tmp1     = StackInt[Word1];
+                        u16 Tmp1Type = StackTypes[Word1];
+                        StackInt[Word0] = Tmp1;
+                        StackTypes[Word0] = Tmp1Type;
+                        StackInt[Word1] = StackInt[Word2];
+                        StackTypes[Word1] = StackTypes[Word2];
+                        StackInt[Word2] = Tmp0;
+                        StackTypes[Word2] = Tmp0Type;
+                        break;
+                    }
+                    case VERB_PICK:
+                    {
+                        s32 Index = StackInt[Word0];
+                        StackInt[Word0] = StackInt[Word0-Index-1];
+                        StackTypes[Word0] = StackTypes[Word0-Index-1];
                         break;
                     }
 
