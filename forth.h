@@ -22,12 +22,21 @@ struct forth_ctx
     u32 StackReturnEnds[32];
     u32 StackReturnCount;   
 
+    u32 StackLoopRewinds[32];
+    s32 StackLoopCounters[32];
+    s32 StackLoopEnds[32];
+    u32 StackLoopCount;   
+
+    u32 StackAuxData[32];
+    u16 StackAuxTypes[32];
+    u16 StackAuxCount;
+
     // Stack
-    u64    Data[64]; 
-    u64    _Guard0[64]; 
+    u32    Data[64]; 
+    u32    _Guard0[64]; 
     u16    DataTypes[64]; 
-    u64    _Guard1[64]; 
-    u64    Count;   // # of items on the stack
+    u32    _Guard1[64]; 
+    u32    Count;   // # of items on the stack
 
     forth_fn ModuleVerbFuncPtrs[512];
     u64      ModuleVerbHashes[512];

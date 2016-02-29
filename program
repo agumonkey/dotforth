@@ -12,4 +12,11 @@
 
 : squared dup dup * * ;
 
-30 squared
+: loop-example
+3 1 do .I >r
+    3 1 do r@ .I .*
+    loop
+    r> drop
+loop ;
+
+loop-example

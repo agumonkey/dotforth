@@ -39,6 +39,13 @@ enum word_type
     XX(ROT, rot) \
     XX(RROT, -rot) \
     XX(PICK, pick) \
+    XX(LOOP_START, do) \
+    XX(LOOP_END, loop) \
+    XX(LOOP_COUNTERI, I) \
+    XX(LOOP_COUNTERF, .I) \
+    XX(AUX_PUSH, >r) \
+    XX(AUX_POP, r>) \
+    XX(AUX_COPY_TOP, r@) \
     XX(DEFINITION_START, :) \
     XX(DEFINITION_END,   ;) \
 
@@ -540,6 +547,76 @@ void ExecuteForth(forth_ctx* Forth)
                         s32 Index = StackInt[Word0];
                         StackInt[Word0] = StackInt[Word0-Index-1];
                         StackTypes[Word0] = StackTypes[Word0-Index-1];
+                        break;
+                    }
+                    case VERB_LOOP_START:
+                    {
+                        s32 Counter = StackInt[Word0];
+                        s32 End = StackInt[Word1];
+                        Forth->Count -= 2;
+                        u32 StackLoopCount = Forth->StackLoopCount;
+                        Forth->StackLoopRewinds[StackLoopCount] = ii;
+                        Forth->StackLoopCounters[StackLoopCount] = Counter;
+                        Forth->StackLoopEnds[StackLoopCount] = End;
+                        Forth->StackLoopCount++;
+                        break;
+                    }
+                    case VERB_LOOP_END:
+                    {
+                        u32 StackLoopCount = Forth->StackLoopCount-1;
+                        s32 Counter = Forth->StackLoopCounters[StackLoopCount];
+                        s32 End = Forth->StackLoopEnds[StackLoopCount];
+                        if (End != Counter)
+                        {
+                            s32 Increment = End > Counter ? 1 : -1;
+                            ii = Forth->StackLoopRewinds[StackLoopCount];
+                            Forth->StackLoopCounters[StackLoopCount] += Increment;
+                        }
+                        else
+                        {
+                            --Forth->StackLoopCount;
+                        }
+                        break;
+                    }
+                    case VERB_LOOP_COUNTERI:
+                    {
+                        Forth->Count++;
+                        StackInt[Word0] = Forth->StackLoopCounters[Forth->StackLoopCount-1];
+                        StackTypes[Word0] = TYPE_INTEGER;
+                        break;
+                    }
+                    case VERB_LOOP_COUNTERF:
+                    {
+                        Forth->Count++;
+                        StackFloat[Word0] = (f32)Forth->StackLoopCounters[Forth->StackLoopCount-1];
+                        StackTypes[Word0] = TYPE_FLOAT;
+                        break;
+                    }
+                    case VERB_AUX_PUSH:
+                    {
+                        u32 Data = StackInt[Word0];
+                        u16 Type = StackTypes[Word0];
+                        Forth->StackAuxData[Forth->StackAuxCount] = Data;
+                        Forth->StackAuxTypes[Forth->StackAuxCount++] = Type;
+                        Forth->Count--;
+                        break;
+                    }
+                    case VERB_AUX_POP:
+                    {
+                        u32 Data = Forth->StackAuxData[Forth->StackAuxCount-1];
+                        u16 Type = Forth->StackAuxTypes[--Forth->StackAuxCount];
+                        Forth->Count++;
+                        StackInt[Word0] = Data;
+                        StackTypes[Word0] = Type;
+                        break;
+                    }
+                    case VERB_AUX_COPY_TOP:
+                    {
+                        u32 Data = Forth->StackAuxData[Forth->StackAuxCount-1];
+                        u16 Type = Forth->StackAuxTypes[Forth->StackAuxCount-1];
+                        Forth->Count++;
+                        StackInt[Word0] = Data;
+                        StackTypes[Word0] = Type;
                         break;
                     }
 
