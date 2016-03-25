@@ -10,6 +10,7 @@ ForthVerb(SetMeshPosition)
 #define MODULE_VERBS \
     XX(SetMeshPosition, mesh-pos) \
 
+//
 MODULE_LOADER(Mesh)
 {
 #define XX(name, word) #word,

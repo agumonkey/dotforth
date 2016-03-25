@@ -16,7 +16,7 @@
 3 1 do .I >r
     3 1 do r@ .I .*
     loop
-    r> drop
+    mesh-pos r> drop
 loop ;
 
 loop-example

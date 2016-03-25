@@ -116,6 +116,7 @@ inline bool IsWhitespace(char Char)
     return (Char == ' ' || Char == '\t' || Char == '\n');
 }
 
+// Lookup verb with Hash in VerbNameHashes
 u32 FindVerbEntry(forth_ctx* Forth, u64 Hash)
 {
     u32 VerbsCount = Forth->VerbsCount;
