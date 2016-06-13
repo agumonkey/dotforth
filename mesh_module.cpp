@@ -6,9 +6,19 @@ ForthVerb(SetMeshPosition)
     LOG("Mesh position: %f %f %f\n", xx, yy, zz);
 }
 
+ForthVerb(SetMeshRotation)
+{
+    Pop_f32(zz);
+    Pop_f32(yy);
+    Pop_f32(xx);
+    LOG("Mesh rotation: %f %f %f\n", xx, yy, zz);
+}
+
+
 #define MODULE_LOADER(name) u32 LoadModule_##name(u64* VerbHashes, forth_fn* VerbFuncPtrs)
 #define MODULE_VERBS \
     XX(SetMeshPosition, mesh-pos) \
+    XX(SetMeshRotation, mesh-rot) \
 
 //
 MODULE_LOADER(Mesh)

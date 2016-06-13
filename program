@@ -16,7 +16,9 @@
 3 1 do .I >r
     3 1 do r@ .I .*
     loop
-    mesh-pos r> drop
+    mesh-rot r> drop
 loop ;
 
 loop-example
+
+60 div5
