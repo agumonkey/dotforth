@@ -72,16 +72,6 @@ ConvertStrHex(char* String, u32 Length)
     return Value;
 }
 
-s32 _strlen(char* Str)
-{
-    u32 Len = 0;
-    for (int ii=0; Str[ii] != 0; ++ii)
-    {
-        Len++;
-    } 
-    return Len;
-}
-
 void 
 PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseOffset)
 {
@@ -94,7 +84,7 @@ PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseO
     for (int ii=0; ii<Count; ++ii)
     {
         struct forth_instruction Inst = Instructions[ii];    
-        printf("%2d: OP_%s %.*s :: %d\n", BaseOffset+ii, OpNames[Inst.Op], (int)(10 - _strlen(OpNames[Inst.Op])), "                      ", Inst.Value);
+        printf("%2d: OP_%s %.*s :: %d\n", BaseOffset+ii, OpNames[Inst.Op], (int)(10 - strlen(OpNames[Inst.Op])), "                      ", Inst.Value);
     }
 }
 
@@ -119,7 +109,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
 #define SkipWhitespace       while (ii < StringLength-1 &&  IsWhitespace(String[ii])) { ++ii;  }  
 #define SkipUntilWhitespace  while (ii < StringLength-1 && !IsWhitespace(String[ii])) { ++ii; } 
 
-#define OpWord(str) OpStr = str; if (_strlen(str) == WordLength && strncmp(WordStr, str, WordLength) == 0)
+#define OpWord(str) OpStr = str; if (strlen(str) == WordLength && strncmp(WordStr, str, WordLength) == 0)
 #define EmitOp(id, val) { InstructionStream[(*InstructionStreamCount)++] = (struct forth_instruction) {id, val}; }
         SkipWhitespace;
         WordStart = ii;
@@ -197,7 +187,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
             }
             if (WordIsInteger)
             {
-                printf("INTEGER: %.*s\n", WordLength, WordStr);
+                //printf("INTEGER: %.*s\n", WordLength, WordStr);
                 EmitOp(0, ConvertBase10StrInt(WordStr, WordLength));
             }
             else
@@ -247,7 +237,6 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
     PrintBytecodeStream(ProgramInstructions, ProgramInstructionsCount, 0);
     printf("Word instructions\n");
     PrintBytecodeStream(WordInstructions,    WordInstructionsCount, ProgramInstructionsCount);
-    //DumpBytecodeStream("program", ProgramInstructions, ProgramInstructionsCount, WordInstructions, WordInstructionsCount);
 
     u32 Offset = 0;
     u32 Size   = sizeof(struct forth_instruction) * ProgramInstructionsCount;
