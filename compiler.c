@@ -72,6 +72,16 @@ ConvertStrHex(char* String, u32 Length)
     return Value;
 }
 
+s32 _strlen(char* Str)
+{
+    u32 Len = 0;
+    for (int ii=0; Str[ii] != 0; ++ii)
+    {
+        Len++;
+    } 
+    return Len;
+}
+
 void 
 PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseOffset)
 {
@@ -84,7 +94,7 @@ PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseO
     for (int ii=0; ii<Count; ++ii)
     {
         struct forth_instruction Inst = Instructions[ii];    
-        printf("%2d: OP_%s %.*s :: %d\n", BaseOffset+ii, OpNames[Inst.Op], (int)(10 - strlen(OpNames[Inst.Op])), "                      ", Inst.Value);
+        printf("%2d: OP_%s %.*s :: %d\n", BaseOffset+ii, OpNames[Inst.Op], (int)(10 - _strlen(OpNames[Inst.Op])), "                      ", Inst.Value);
     }
 }
 
@@ -109,7 +119,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
 #define SkipWhitespace       while (ii < StringLength-1 &&  IsWhitespace(String[ii])) { ++ii;  }  
 #define SkipUntilWhitespace  while (ii < StringLength-1 && !IsWhitespace(String[ii])) { ++ii; } 
 
-#define OpWord(str) OpStr = str; if (strlen(str) == WordLength && strncmp(WordStr, str, WordLength) == 0)
+#define OpWord(str) OpStr = str; if (_strlen(str) == WordLength && strncmp(WordStr, str, WordLength) == 0)
 #define EmitOp(id, val) { InstructionStream[(*InstructionStreamCount)++] = (struct forth_instruction) {id, val}; }
         SkipWhitespace;
         WordStart = ii;
@@ -127,8 +137,6 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
         OpWord("]]")       { CommentMode = false; continue; } 
         if (CommentMode)   { continue; }
 
-        // First check for builtin keywords
-        // Increment OpID for each, to avoid defining enum for those
         OpWord("+")       { EmitOp(2, 0);  continue; } 
         OpWord("-")       { EmitOp(3, 0);  continue; } 
         OpWord("*")       { EmitOp(4, 0);  continue; } 
@@ -142,9 +150,9 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
         OpWord("lctr")    { EmitOp(12, 0); continue; }
         OpWord("@l")      { EmitOp(13, 0); continue; } // load
         OpWord("@s")      { EmitOp(14, 0); continue; } // store
-        OpWord("range")   { EmitOp(17, 0); continue; } // store
-        OpWord("for")     { EmitOp(18, 0); continue; } // store
-        OpWord("pick")     { EmitOp(19, 0); continue; } // store
+        OpWord("range")   { EmitOp(17, 0); continue; } 
+        OpWord("for")     { EmitOp(18, 0); continue; } 
+        OpWord("pick")    { EmitOp(19, 0); continue; }
         OpWord(":")                       
         {
             InstructionStream      = WordInstructions;
@@ -159,7 +167,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
         }
         OpWord(";")                       // 13
         {
-            EmitOp(15, 0); // TODO(onat): Return to the instruction from the pushed stack
+            EmitOp(15, 0); 
             //CurrentWord.InstructionCount  = WordInstructionsCount - CurrentWord.InstructionID;
             //printf("WORD DEF: %.*s :: %d instructions\n", CurrentWord.WordLength, CurrentWord.WordStart, CurrentWord.InstructionCount);
             WordDefinitions[WordDefinitionsCount++] = CurrentWord;
@@ -214,7 +222,6 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
     EmitOp(16, 0);  // OP_EOF
 
     // Fix the offsets for the program + word codes
-    //
     for (int ii=0; ii<ProgramInstructionsCount; ++ii)
     {
         struct forth_instruction* Instr = &ProgramInstructions[ii];
@@ -271,3 +278,4 @@ int main(int argc, char** argv)
     fclose(BytecodeFile);
     return 0;    
 }
+
