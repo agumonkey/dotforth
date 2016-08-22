@@ -1,10 +1,10 @@
 dotforth
---------
+========
 
-Simple Forth-like language implementation/prototype in C++, with easy C++ interfaces.
-Pretty much WIP, will optimize with x86-64 and ARM assembly later.
+A minimal extensible Forth.
+Works on Linux/x64
 
-Usage:
-./build.sh
-./test program
+Usage
+=====
 
+Install NASM + make
