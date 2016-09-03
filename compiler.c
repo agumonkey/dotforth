@@ -88,7 +88,7 @@ PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseO
     static char* OpNames[] = { 
         "PUSH",  "CALLW", "IADD", "ISUB", "IMUL", "IDIV", "DUP", "SWAP", "DROP",
         "OVER",  "DO",    "LOOP", "LCTR", "LOAD", "STORE", "RET",  "EOF" ,"RANGE",
-        "FOR" ,  "PICK", 
+        "FOR" ,  "PICK",  "IFTHEN", "EQ?",  "LE?", "GE?", "LT?", "GT?"
     };
     
     for (int ii=0; ii<Count; ++ii)
@@ -112,6 +112,9 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
     int ProgramInstructionsCount = 0;
     int* InstructionStreamCount  = &ProgramInstructionsCount;
     struct forth_word_definition  CurrentWord = {0};
+
+    static int JumpStack[32];
+    int        JumpStackCount;
 
     bool CommentMode = false;
     for (int ii=0; ii<StringLength; ++ii)
@@ -153,6 +156,11 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
         OpWord("range")   { EmitOp(17, 0); continue; } 
         OpWord("for")     { EmitOp(18, 0); continue; } 
         OpWord("pick")    { EmitOp(19, 0); continue; }
+        OpWord("==")      { EmitOp(21, 0); continue; }
+        OpWord("<=")      { EmitOp(22, 0); continue; }
+        OpWord(">=")      { EmitOp(23, 0); continue; }
+        OpWord("<")       { EmitOp(24, 0); continue; }
+        OpWord(">")       { EmitOp(25, 0); continue; }
         OpWord(":")                       
         {
             InstructionStream      = WordInstructions;
@@ -165,7 +173,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
             CurrentWord.WordLength    = ii - WordOffset;
             continue;
         }
-        OpWord(";")                       // 13
+        OpWord(";")
         {
             EmitOp(15, 0); 
             //CurrentWord.InstructionCount  = WordInstructionsCount - CurrentWord.InstructionID;
@@ -173,6 +181,19 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
             WordDefinitions[WordDefinitionsCount++] = CurrentWord;
             InstructionStream         = ProgramInstructions;
             InstructionStreamCount    = &ProgramInstructionsCount;
+            continue;
+        }
+        OpWord("if")
+        {
+            JumpStack[JumpStackCount++] = *InstructionStreamCount;
+            EmitOp(20, 0); 
+            continue;
+        }
+        OpWord("then")
+        {
+            // Write the jump tracket back to the original if...
+            int IfInstructionID = JumpStack[--JumpStackCount];
+            InstructionStream[IfInstructionID] = (struct forth_instruction) {20, *InstructionStreamCount};
             continue;
         }
 

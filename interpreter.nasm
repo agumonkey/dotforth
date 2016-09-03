@@ -169,6 +169,38 @@ fop_pick:
     jmp     interpreter_loop
 
 
+fop_ifthen:
+    mov     eax, stk(1)
+    mov     ebx, valreg
+    sub     sptr, 4
+    cmp     eax, 0
+    jne     .branch          
+    pop     ictr
+    push    rbx
+.branch:
+    jmp     interpreter_loop
+
+%macro cmpop 2
+fop_%1:
+    mov     ebx, stk(1)
+    mov     eax, stk(2)
+    sub     sptr, 4
+    cmp     eax, ebx     
+    mov     stk(1), 0
+    %2      .branch        
+    mov     stk(1), 1
+.branch:
+    jmp     interpreter_loop
+%endmacro
+
+; inverse logic
+cmpop beq , jne  ; branch-equal
+cmpop ble , jg   ; branch-less-equal
+cmpop bge , jl   ; branch-greater-equal
+cmpop blt , jge  ; branch-less-than
+cmpop bgt , jle  ; branch-greater-than
+    
+    
 print_hex: ; rax = 32-bit integer to print
     mov     rdi, rax
     mov     rcx, 0
@@ -192,11 +224,6 @@ print_hex: ; rax = 32-bit integer to print
     mov     rdx, 9
     syscall
     ret
-
-%macro squared 0
-  op_dup
-  op_imul
-%endmacro
 
 struc Loop
   .instr: resd 1        ; Loop jump target, (Forth instruction idx, to load into ictr)
@@ -261,6 +288,12 @@ jmpop eof
 jmpop range
 jmpop for
 jmpop pick
+jmpop ifthen
+jmpop beq
+jmpop ble
+jmpop bge
+jmpop blt
+jmpop bgt
 
 bytecode:
 incbin  "bytecode"

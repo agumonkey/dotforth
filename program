@@ -20,3 +20,7 @@
 
 [[ Load cell 0 and 1 and add them together ]]
 0 @l 1 @l + 
+
+0  if 10 then
+30 10 <  if ,a then
+30 30 == if ,b then
