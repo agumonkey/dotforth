@@ -132,6 +132,7 @@ fop_retw:
     jmp     interpreter_loop
 
 fop_eof:
+    pop     ictr 
     ; syscall sys_exit
     ; Print the stack
 .loop:
@@ -141,9 +142,13 @@ fop_eof:
     cmp     sptr, data_stack
     jne     .loop
 
-    mov     rax, 60
-    mov     rdi, 0
-    syscall
+    pop     rsp
+    pop     rbp
+    ret
+
+    ; mov     rax, 60
+    ; mov     rdi, 0
+    ; syscall
 
 fop_load:
     mov     eax, stk(1) ; Get the load-idx from the stack
@@ -178,6 +183,17 @@ fop_ifthen:
     pop     ictr
     push    rbx
 .branch:
+    jmp     interpreter_loop
+
+fop_cmdwrite:
+    mov     eax, stk(1)
+    mov     rcx, [cmdbufptr]
+    mov     rbx, [cmdbufoffset]
+    sub     sptr, 4
+    lea     rdx, [rcx + rbx * 4]
+    inc     rbx
+    mov     [cmdbufoffset], rbx
+    mov     dword [rdx], eax
     jmp     interpreter_loop
 
 %macro cmpop 2
@@ -237,14 +253,21 @@ struc Instruction
    .val   : resd 1     
 endstruc
 
-_start:                                         ;tell linker entry point
+global dotForthExecute 
+dotForthExecute:                                ; tell linker entry point
+    push    rbp
+    push    rsp
+    mov     [bytecodeptr], rdi
+    mov     [cmdbufptr], rsi
     mov     r8,   data_stack                    ; for voltron
     mov     sptr, data_stack                    ; sptr == addr of top of data stack
     mov     lptr, loop_stack                    ; lptr == addr of top of loop stack
     push    0
+
 interpreter_loop:
-    pop     ictr                               ; ictr == current Forth instruction IDX in stream
-    lea     rax, [bytecode+ictr*8]
+    pop     ictr                                ; ictr == current Forth instruction IDX in stream
+    mov     rbx, [bytecodeptr]
+    lea     rax, [rbx+ictr*8]
 
     mov     opreg,  dword [rax + Instruction.op]
     mov     valreg, dword [rax + Instruction.val]
@@ -257,10 +280,13 @@ interpreter_loop:
 
 section     .bss
 
-data_stack    resq 8
-loop_stack    resq 8
-var_memory    resd 64
-printbuf      resb 32
+data_stack      resq 8
+loop_stack      resq 8
+var_memory      resd 64
+printbuf        resb 32
+cmdbufptr       resq 1
+cmdbufoffset    resq 1
+bytecodeptr     resq 1
 
 %macro jmpop 1
     dq  fop_%1
@@ -294,8 +320,6 @@ jmpop ble
 jmpop bge
 jmpop blt
 jmpop bgt
-
-bytecode:
-incbin  "bytecode"
+jmpop cmdwrite
 
 hexlookup   db  '0123456789abcdef'

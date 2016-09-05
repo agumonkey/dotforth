@@ -88,7 +88,7 @@ PrintBytecodeStream(struct forth_instruction* Instructions, u32 Count, u32 BaseO
     static char* OpNames[] = { 
         "PUSH",  "CALLW", "IADD", "ISUB", "IMUL", "IDIV", "DUP", "SWAP", "DROP",
         "OVER",  "DO",    "LOOP", "LCTR", "LOAD", "STORE", "RET",  "EOF" ,"RANGE",
-        "FOR" ,  "PICK",  "IFTHEN", "EQ?",  "LE?", "GE?", "LT?", "GT?"
+        "FOR" ,  "PICK",  "IFTHEN", "EQ?",  "LE?", "GE?", "LT?", "GT?", "CMDW>>"
     };
     
     for (int ii=0; ii<Count; ++ii)
@@ -114,7 +114,7 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
     struct forth_word_definition  CurrentWord = {0};
 
     static int JumpStack[32];
-    int        JumpStackCount;
+    static int JumpStackCount = 0;
 
     bool CommentMode = false;
     for (int ii=0; ii<StringLength; ++ii)
@@ -161,6 +161,8 @@ CompileForth(char* String, int StringLength, char* BytecodeOut)
         OpWord(">=")      { EmitOp(23, 0); continue; }
         OpWord("<")       { EmitOp(24, 0); continue; }
         OpWord(">")       { EmitOp(25, 0); continue; }
+        OpWord(">")       { EmitOp(25, 0); continue; }
+        OpWord(">>")      { EmitOp(26, 0); continue; }
         OpWord(":")                       
         {
             InstructionStream      = WordInstructions;

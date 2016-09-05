@@ -24,3 +24,5 @@
 0  if 10 then
 30 10 >  if ,a then
 30 30 == if ,b then
+
+100 >> 300 >>
